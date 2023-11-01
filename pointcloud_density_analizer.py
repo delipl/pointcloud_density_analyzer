@@ -105,6 +105,13 @@ def update_histogram(axis, data):
     axis.grid()
     axis.hist(data)
 
+def multiply_top_histogram_with_exp(histogram, a):
+    for x in range(len(histogram)):
+        for y in range(len(histogram[0])):
+            histogram[x][y] *= math.exp(a*(len(histogram)-x)/len(histogram))
+    # print(histogram)
+    return histogram
+
 # Window and plots:
 fig, ((ax, az), (ix, iz), (hx, hz)) = plt.subplots(3, 2)
 # Sliders
@@ -138,6 +145,12 @@ top_resolution_slider = Slider(
     ax=axamp, label="Top res", valmin=0.01, valmax=0.2, valinit=0.1, orientation="vertical"
 )
 
+axamp = fig.add_axes([0.125, 0.01, 0.0225, 0.2])
+exp_slider = Slider(
+    ax=axamp, label="exp(a*x)", valmin=0.0, valmax=5.0, valinit=0.0, orientation="vertical"
+)
+
+
 # Create the figure and the line that we will manipulate
 cloud = read_pcd("to_histogram_pcds/histogram_ground_3129588.pcd")
 front_rotated_cloud = []
@@ -158,6 +171,7 @@ top_rotated_cloud = np.copy(top_cloud)
 
 front_density_image = generate_density_image(rotated, front_resolution_slider.val, 2.4, 1.0)
 ix.imshow(front_density_image)
+
 top_density_image = generate_density_image(top_cloud, top_resolution_slider.val, 2.4, 4.0)
 iz.imshow(top_density_image)
 
@@ -182,7 +196,7 @@ def update(val):
     front_density_image = generate_density_image(front_rotated_cloud, front_resolution_slider.val, 2.4, 1.0)
     ix.imshow(front_density_image)
     top_density_image = generate_density_image(top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0)
-    iz.imshow(top_density_image)
+    iz.imshow(multipied_top_histogram)
     hx.hist(front_density_image)
 
     update_histogram(hx, front_density_image)
@@ -209,13 +223,14 @@ def update_front_image(val):
 def update_top_image(val):
     global top_rotated_cloud
     top_density_image = generate_density_image(top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0)
-    iz.imshow(top_density_image)
+    multipied_top_histogram = multiply_top_histogram_with_exp(top_density_image, exp_slider.val)
+    iz.imshow(multipied_top_histogram)
     update_histogram(hz, top_density_image)
 
 
 front_resolution_slider.on_changed(update_front_image)
 top_resolution_slider.on_changed(update_top_image)
-
+exp_slider.on_changed(update_top_image)
 
 def reset(event):
     freq_slider.reset()

@@ -145,7 +145,7 @@ top_resolution_slider = Slider(
     ax=axamp, label="Top res", valmin=0.01, valmax=0.2, valinit=0.1, orientation="vertical"
 )
 
-axamp = fig.add_axes([0.125, 0.01, 0.0225, 0.2])
+axamp = fig.add_axes([0.125, 0.02, 0.0225, 0.2])
 exp_slider = Slider(
     ax=axamp, label="exp(a*x)", valmin=0.0, valmax=5.0, valinit=0.0, orientation="vertical"
 )

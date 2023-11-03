@@ -1,8 +1,8 @@
 import numpy as np
+import sys
 import math
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Button, Slider
-from matplotlib.ticker import AutoMinorLocator, MultipleLocator
+from matplotlib.widgets import Slider
 
 
 def rotation_matrix(axis, theta):
@@ -152,7 +152,14 @@ exp_slider = Slider(
 
 
 # Create the figure and the line that we will manipulate
-cloud = read_pcd("to_histogram_pcds/histogram_ground_3129588.pcd")
+cloud = read_pcd(sys.argv[1])
+print(f"Reading PCD: {sys.argv[1]}...")
+for i in range(2, len(sys.argv)):
+    print(f"Reading PCD: {sys.argv[i]}...")
+    cloud = np.concatenate((cloud, read_pcd(sys.argv[i])), axis=0)
+
+print(f"Read { len(cloud) } points")
+
 front_rotated_cloud = []
 top_rotated_cloud = []
 
@@ -177,6 +184,7 @@ iz.imshow(top_density_image)
 
 update_histogram(hx, front_density_image)
 update_histogram(hz, top_density_image)
+multipied_top_histogram = multiply_top_histogram_with_exp(top_density_image, exp_slider.val)
 
 
 
@@ -186,6 +194,7 @@ update_histogram(hz, top_density_image)
 def update(val):
     global front_rotated_cloud
     global top_rotated_cloud
+    global multipied_top_histogram
 
     # ix.imshow()
     front_rotated_cloud = rotate_cloud(rotated, roll_slider.val, pitch_slider.val, yaw_slider.val)
@@ -202,10 +211,6 @@ def update(val):
     update_histogram(hx, front_density_image)
     update_histogram(hz, top_density_image)
     fig.canvas.draw_idle()
-    
-
-
-
 
 # # register the update function with each slider
 roll_slider.on_changed(update)
@@ -222,6 +227,8 @@ def update_front_image(val):
 
 def update_top_image(val):
     global top_rotated_cloud
+    global multipied_top_histogram
+
     top_density_image = generate_density_image(top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0)
     multipied_top_histogram = multiply_top_histogram_with_exp(top_density_image, exp_slider.val)
     iz.imshow(multipied_top_histogram)

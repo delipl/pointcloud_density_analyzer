@@ -6,6 +6,6 @@ It is possible to rotate the pointcloud, set the 2D histograms resolutions and m
 ```bash
 git clone https://github.com/delipl/pointcloud_density_analyzer
 cd pointcloud_density_analyzer
-python3 pointcloud_density_analyzer.py
+python3 pointcloud_density_analyzer.py <pointcloud1>.pcd <pointcloud2>.pcd ...
 ```
 ![View](.docs/view.png)

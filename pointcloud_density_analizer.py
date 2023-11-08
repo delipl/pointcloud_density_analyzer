@@ -77,11 +77,12 @@ def generate_density_image(cloud, resolution: float, width: float, height: float
 
     for point in cloud:
         image_width_pos = int((width / 2 + point[0]) / resolution)
-        image_height_pos = int(point[1] / resolution)
-
-        if image_width_pos >= image_width or image_height - image_height_pos -1 >= image_height:
+        image_height_pos = image_height - int(point[1] / resolution) - 1
+        if image_height_pos < 0 or image_width_pos < 0:
             continue
-        histogram_image[image_height - image_height_pos -1][image_width_pos] += 1
+        if image_width_pos >= image_width or image_height_pos >= image_height:
+            continue
+        histogram_image[image_height_pos][image_width_pos] += 1
 
     return histogram_image
 
@@ -223,8 +224,6 @@ def update_front_image(val):
     ix.imshow(front_density_image)
     update_histogram(hx, front_density_image)
 
-
-
 def update_top_image(val):
     global top_rotated_cloud
     global multipied_top_histogram
@@ -240,7 +239,6 @@ top_resolution_slider.on_changed(update_top_image)
 exp_slider.on_changed(update_top_image)
 
 def reset(event):
-    freq_slider.reset()
     roll_slider.reset()
     pitch_slider.reset()
     yaw_slider.reset()

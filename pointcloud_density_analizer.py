@@ -27,6 +27,7 @@ def rotation_matrix(axis, theta):
 
 def read_pcd(file_path):
     points = []
+    rot_matrix = rotation_matrix([0, 0, 1], math.pi / 2.0)
     with open(file_path, "r") as f:
         for line in f:
             if line.startswith("DATA"):
@@ -36,7 +37,7 @@ def read_pcd(file_path):
             if len(values) >= 3:
                 x, y, z = float(values[0]), float(values[1]), float(values[2])
                 point = np.array([x, y, z])
-                point = np.dot(rotation_matrix([0, 0, 1], math.pi / 2.0), point)
+                point = np.dot(rot_matrix, point)
                 points.append(point)
 
     return np.array(points)
@@ -44,27 +45,29 @@ def read_pcd(file_path):
 
 def to_top_view(cloud):
     top_cloud = np.copy(cloud)
+    rot_matrix = rotation_matrix([1, 0, 0], math.pi / 2.0)
+    rot_matrix2 = rotation_matrix([0, 0, 1], math.pi)
+
     for i in range(len(cloud)):
         top_cloud[i] += np.array([0.0, 0.1, 0.0])
 
-        top_cloud[i] = np.dot(rotation_matrix([1, 0, 0], math.pi / 2.0), top_cloud[i])
-        top_cloud[i] = np.dot(rotation_matrix([0, 0, 1], math.pi), top_cloud[i])
+        top_cloud[i] = np.dot(rot_matrix, top_cloud[i])
+        top_cloud[i] = np.dot(rot_matrix2, top_cloud[i])
     return top_cloud
+
 
 def rotate_cloud(cloud, roll, pitch, yaw):
     new_cloud = np.copy(cloud)
+    roll_mat = rotation_matrix([0, 0, 1], roll * math.pi / 180.0)
+    pithc_mat = rotation_matrix([0, 1, 0], pitch * math.pi / 180.0)
+    yaw_mat = rotation_matrix([1, 0, 0], yaw * math.pi / 180.0)
     for i in range(len(cloud)):
-        new_cloud[i] = np.dot(
-            rotation_matrix([0, 0, 1], roll * math.pi / 180.0), cloud[i]
-        )
-        new_cloud[i] = np.dot(
-            rotation_matrix([0, 1, 0], pitch * math.pi / 180.0), new_cloud[i]
-        )
-        new_cloud[i] = np.dot(
-            rotation_matrix([1, 0, 0], yaw * math.pi / 180.0), new_cloud[i]
-        )
+        new_cloud[i] = np.dot(roll_mat, cloud[i])
+        new_cloud[i] = np.dot(pithc_mat, new_cloud[i])
+        new_cloud[i] = np.dot(yaw_mat, new_cloud[i])
     return new_cloud
-    
+
+
 def generate_density_image(cloud, resolution: float, width: float, height: float):
     histogram_image = []
 
@@ -87,8 +90,6 @@ def generate_density_image(cloud, resolution: float, width: float, height: float
     return histogram_image
 
 
-
-
 def update_plot(axis, cloud):
     x = cloud[:, 0]
     y = cloud[:, 1]
@@ -99,6 +100,7 @@ def update_plot(axis, cloud):
     axis.grid()
     axis.scatter(x, y, z, c=[1 for i in range(len(x))])
 
+
 def update_histogram(axis, data):
     axis.clear()
     axis.set_xlabel("density")
@@ -106,12 +108,14 @@ def update_histogram(axis, data):
     axis.grid()
     axis.hist(data)
 
+
 def multiply_top_histogram_with_exp(histogram, a):
     for x in range(len(histogram)):
         for y in range(len(histogram[0])):
-            histogram[x][y] *= math.exp(a*(len(histogram)-x)/len(histogram))
+            histogram[x][y] *= math.exp(a * (len(histogram) - x) / len(histogram))
     # print(histogram)
     return histogram
+
 
 # Window and plots:
 fig, ((ax, az), (ix, iz), (hx, hz)) = plt.subplots(3, 2)
@@ -165,7 +169,7 @@ front_rotated_cloud = []
 top_rotated_cloud = []
 
 
-rotated = rotate_cloud(cloud, 180, 0,0)
+rotated = rotate_cloud(cloud, 180, 0, 0)
 
 rotated = rotate_cloud(rotated, roll_slider.val, pitch_slider.val, yaw_slider.val)
 update_plot(ax, rotated)
@@ -188,7 +192,6 @@ update_histogram(hz, top_density_image)
 multipied_top_histogram = multiply_top_histogram_with_exp(top_density_image, exp_slider.val)
 
 
-
 # The function to be called anytime a slider's value changes
 
 
@@ -203,9 +206,13 @@ def update(val):
     update_plot(ax, front_rotated_cloud)
     update_plot(az, top_rotated_cloud)
 
-    front_density_image = generate_density_image(front_rotated_cloud, front_resolution_slider.val, 2.4, 1.0)
+    front_density_image = generate_density_image(
+        front_rotated_cloud, front_resolution_slider.val, 2.4, 1.0
+    )
     ix.imshow(front_density_image)
-    top_density_image = generate_density_image(top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0)
+    top_density_image = generate_density_image(
+        top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0
+    )
     iz.imshow(multipied_top_histogram)
     hx.hist(front_density_image)
 
@@ -213,22 +220,29 @@ def update(val):
     update_histogram(hz, top_density_image)
     fig.canvas.draw_idle()
 
+
 # # register the update function with each slider
 roll_slider.on_changed(update)
 pitch_slider.on_changed(update)
 yaw_slider.on_changed(update)
 
+
 def update_front_image(val):
     global front_rotated_cloud
-    front_density_image = generate_density_image(front_rotated_cloud, front_resolution_slider.val, 2.4, 1.0)
+    front_density_image = generate_density_image(
+        front_rotated_cloud, front_resolution_slider.val, 2.4, 1.0
+    )
     ix.imshow(front_density_image)
     update_histogram(hx, front_density_image)
+
 
 def update_top_image(val):
     global top_rotated_cloud
     global multipied_top_histogram
 
-    top_density_image = generate_density_image(top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0)
+    top_density_image = generate_density_image(
+        top_rotated_cloud, top_resolution_slider.val, 2.4, 4.0
+    )
     multipied_top_histogram = multiply_top_histogram_with_exp(top_density_image, exp_slider.val)
     iz.imshow(multipied_top_histogram)
     update_histogram(hz, top_density_image)
@@ -237,6 +251,7 @@ def update_top_image(val):
 front_resolution_slider.on_changed(update_front_image)
 top_resolution_slider.on_changed(update_top_image)
 exp_slider.on_changed(update_top_image)
+
 
 def reset(event):
     roll_slider.reset()

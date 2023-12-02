@@ -2,12 +2,22 @@ from direct.showbase.ShowBase import ShowBase
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.DirectSlider import DirectSlider
 from direct.gui.DirectButton import DirectButton
-from panda3d.core import Point3, LineSegs, NodePath, GeomLines, Geom, GeomNode, GeomVertexFormat, GeomVertexData, GeomVertexWriter, GeomTriangles
-import random
+from panda3d.core import (
+    Point3,
+    LineSegs,
+    GeomLines,
+    Geom,
+    GeomNode,
+    GeomVertexFormat,
+    GeomVertexData,
+    GeomVertexWriter,
+    GeomTriangles,
+)
 import math
 import numpy as np
 from dataclasses import dataclass
-from collada import *
+from collada import Collada
+
 
 @dataclass
 class LidarConfig:
@@ -15,13 +25,14 @@ class LidarConfig:
     vertical_angle_step: float
     horizontal_angle_step: float
 
+
 class MyApp(ShowBase):
     def __init__(self):
         ShowBase.__init__(self)
-        self.lidar = LidarConfig(16, 0.4, 2.0)  
+        self.lidar = LidarConfig(16, 0.4, 2.0)
         # self.disable_mouse()
 
-        mesh = Collada('leg.dae')
+        mesh = Collada("leg.dae")
         self.model_triangles = []
         mesh.scene
         for geometry in mesh.geometries:
@@ -33,7 +44,6 @@ class MyApp(ShowBase):
                     self.model_triangles.append(tri)
                     self.display_triangle(tri)
 
-
         self.camera.setPos(5.0, 10.0, 5)
         self.camera.lookAt(Point3(0, 0, 0))
 
@@ -41,9 +51,7 @@ class MyApp(ShowBase):
         self.create_objects_sliders()
         self.create_lidar_sliders()
         self.create_and_display_grid()
-        self.coordinates_text = OnscreenText(text="",
-                                             pos=(0.1, -0.4),
-                                             scale=0.05)
+        self.coordinates_text = OnscreenText(text="", pos=(0.1, -0.4), scale=0.05)
 
         self.taskMgr.add(self.updateCoordinatesTask, "update_coordinates_task")
         self.points = []
@@ -87,7 +95,7 @@ class MyApp(ShowBase):
         # Create a NodePath with the GeomNode
         tr = self.render.attachNewNode(geom_node)
         tr.setColor(0.8, 0.5, 0.5, 1)
-        # return 
+        # return
 
     def plot_points(self):
         self.clear_points()
@@ -143,28 +151,33 @@ class MyApp(ShowBase):
         geom_node = GeomNode("grid")
         geom_node.addGeom(geom)
 
-        # Create a NodePath with the GeomNode
-        node_path = self.render.attachNewNode(geom_node)
+    def _create_slider_in_right_down_corner(
+        self, slider_range, position_z, callback, value=0, offset=0
+    ):
+        return DirectSlider(
+            range=(-slider_range + offset, slider_range + offset),
+            command=callback,
+            pos=(0.8, 0, position_z),
+            scale=0.5,
+            value=value + offset,
+        )
 
-    def _create_slider_in_right_down_corner(self, slider_range, position_z, callback, value=0, offset = 0):
-        return DirectSlider(range=(-slider_range + offset, slider_range +offset),
-                            command=callback,
-                            pos=(0.8, 0, position_z),
-                            scale=0.5,
-                            value=value+offset
-    )
-
-    def _create_slider_in_left_down_corner(self, slider_range, position_z, callback, value=0, offset = 0):
-        return DirectSlider(range=(-slider_range + offset, slider_range +offset),
-                            command=callback,
-                            pos=(-0.6, 0, position_z),
-                            scale=0.5,
-                            value=value+offset
-    )
+    def _create_slider_in_left_down_corner(
+        self, slider_range, position_z, callback, value=0, offset=0
+    ):
+        return DirectSlider(
+            range=(-slider_range + offset, slider_range + offset),
+            command=callback,
+            pos=(-0.6, 0, position_z),
+            scale=0.5,
+            value=value + offset,
+        )
 
     def create_objects_sliders(self):
         self.slider_x = self._create_slider_in_right_down_corner(2, -0.45, self.updateSlider)
-        self.slider_y = self._create_slider_in_right_down_corner(2, -0.55, self.updateSlider, 0, 16)
+        self.slider_y = self._create_slider_in_right_down_corner(
+            2, -0.55, self.updateSlider, 0, 16
+        )
         self.slider_z = self._create_slider_in_right_down_corner(2, -0.65, self.updateSlider)
 
         self.slider_roll = self._create_slider_in_right_down_corner(180, -0.75, self.updateSlider)
@@ -172,39 +185,34 @@ class MyApp(ShowBase):
         self.slider_yaw = self._create_slider_in_right_down_corner(180, -0.95, self.updateSlider)
 
     def create_lidar_sliders(self):
-        self.slider_layers = self._create_slider_in_left_down_corner(256, -0.75, self.updateSlider, self.lidar.num_of_layers, 256/2 )
-        self.slider_v_step = self._create_slider_in_left_down_corner(5, -0.85, self.updateSlider, self.lidar.vertical_angle_step, 5/2 )
-        self.slider_h_step = self._create_slider_in_left_down_corner(5, -0.95, self.updateSlider, self.lidar.horizontal_angle_step, 5/2 )
+        self.slider_layers = self._create_slider_in_left_down_corner(
+            256, -0.75, self.updateSlider, self.lidar.num_of_layers, 256 / 2
+        )
+        self.slider_v_step = self._create_slider_in_left_down_corner(
+            5, -0.85, self.updateSlider, self.lidar.vertical_angle_step, 5 / 2
+        )
+        self.slider_h_step = self._create_slider_in_left_down_corner(
+            5, -0.95, self.updateSlider, self.lidar.horizontal_angle_step, 5 / 2
+        )
 
-        self.button = DirectButton(text=("Render pointcloud", "Calculating...", "Render pointcloud"),
-                 scale=.05, 
-                 command=self.plot_points,
-                 pos=(-0.6, 0, -0.6),
-                 )
+        self.button = DirectButton(
+            text=("Render pointcloud", "Calculating...", "Render pointcloud"),
+            scale=0.05,
+            command=self.plot_points,
+            pos=(-0.6, 0, -0.6),
+        )
+
     def updateSlider(self):
         self.slider_count += 1
         if self.slider_count < 18:
             return
         # Update the model's position based on the slider value
-        x = self.slider_x['value']
-        y = self.slider_y['value']
-        z = self.slider_z['value']
-        roll = self.slider_roll['value']
-        pitch = self.slider_pitch['value']
-        yaw = self.slider_yaw['value']
+        x = self.slider_x["value"]
+
         # self.dae_model.setPos(x,y,z)
         # self.dae_model.setHpr(roll,pitch,yaw)
         for triangle in self.model_triangles:
             triangle[0][0] = x
-
-        self.lidar.num_of_layers = int(self.slider_layers["value"])
-        self.lidar.horizontal_angle_step = self.slider_h_step["value"]
-        self.lidar.vertical_angle_step = self.slider_v_step["value"]
-
-        # self.clear_points()
-        # self.plot_points()
-
-
 
     def updateCoordinatesTask(self, task):
         # Update the 3D view coordinates text
@@ -214,12 +222,11 @@ class MyApp(ShowBase):
         #                               f"\n\nz: {pos.z}\n\nroll: {hpr.x}\n\npitch: {hpr.y}\n\nyaw: {hpr.z}")
         return task.cont
 
-
-    def create_point_from_angles_and_range(self, v, h,  r):
+    def create_point_from_angles_and_range(self, v, h, r):
         point = Point3()
-        point.x = r*math.cos(math.radians(v))
-        point.y = r*math.sin(math.radians(v))
-        point.z = r*math.sin(math.radians(h))
+        point.x = r * math.cos(math.radians(h)) * math.cos(math.radians(v))
+        point.y = r * math.cos(math.radians(h)) * math.sin(math.radians(v))
+        point.z = r * math.sin(math.radians(h))
         return point
 
     def create_line_from_angles(self, v, h):
@@ -230,13 +237,13 @@ class MyApp(ShowBase):
         x0, y0, z0 = (0, 0, 0)
         a, b, c = line
         A, B, C, D = sufrace
-        div = (A*a + B*b + C*c)
+        div = A * a + B * b + C * c
         if div == 0:
             return None
-        t = (-D - A*x0 - B*y0 - C*z0) / div
-        x_przeciecia = x0 + a*t
-        y_przeciecia = y0 + b*t
-        z_przeciecia = z0 + c*t
+        t = (-D - A * x0 - B * y0 - C * z0) / div
+        x_przeciecia = x0 + a * t
+        y_przeciecia = y0 + b * t
+        z_przeciecia = z0 + c * t
 
         return x_przeciecia, y_przeciecia, z_przeciecia
 
@@ -251,7 +258,7 @@ class MyApp(ShowBase):
         C = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1)
         D = -A * x1 - B * y1 - C * z1
         return A, B, C, D
-    
+
     def is_point_inside_triangle(self, point, triangle):
         A, B, C = triangle
         A = np.array(A)
@@ -266,17 +273,18 @@ class MyApp(ShowBase):
         v = np.cross(C, A)
         w = np.cross(A, B)
 
-        return np.dot(u,v) > 0 and np.dot(u, w) > 0
+        return np.dot(u, v) > 0 and np.dot(u, w) > 0
 
     def generate_pointcloud(self, lidar: LidarConfig):
-        start_horizontal_angle = -lidar.num_of_layers*lidar.horizontal_angle_step/2
+        start_horizontal_angle = -lidar.num_of_layers * lidar.horizontal_angle_step / 2
         start_vertical_angle = 45.0
-        num_of_vertical_points = int(90/lidar.vertical_angle_step)
+        num_of_vertical_points = int(90 / lidar.vertical_angle_step)
         points = []
+        print(f"Num of layers: {lidar.num_of_layers}")
         for i in range(lidar.num_of_layers):
+            h = start_horizontal_angle + i * lidar.horizontal_angle_step
             for j in range(num_of_vertical_points):
-                v = start_vertical_angle + j*lidar.vertical_angle_step
-                h = start_horizontal_angle + i*lidar.horizontal_angle_step
+                v = start_vertical_angle + j * lidar.vertical_angle_step
                 point = self.create_point_from_angles_and_range(v, h, 3.0)
                 # self.create_and_display_edges([(0,0,0), point])
                 points.append(point)
@@ -290,7 +298,9 @@ class MyApp(ShowBase):
             for triangle in self.model_triangles:
                 suface = self.make_surface_from_triangle(triangle)
                 cross_point = self.cross_surface_and_line(point, suface)
-                if cross_point is not None and self.is_point_inside_triangle(cross_point, triangle):
+                if cross_point is not None and self.is_point_inside_triangle(
+                    cross_point, triangle
+                ):
                     cross_points_for_one_point.append(cross_point)
 
             if len(cross_points_for_one_point) == 0:
@@ -300,8 +310,8 @@ class MyApp(ShowBase):
             for cross_point in cross_points_for_one_point:
                 x_m, y_m, z_m = closest_point
                 x, y, z = cross_point
-                d_m = x_m* x_m + y_m*y_m, z_m*z_m
-                d = x* x + y*y, z*z
+                d_m = x_m * x_m + y_m * y_m, z_m * z_m
+                d = x * x + y * y, z * z
                 if d < d_m:
                     closest_point = cross_point
 
@@ -328,6 +338,7 @@ class MyApp(ShowBase):
         point.setPos(Point3(*position))
         point.reparentTo(self.render)
         return point
+
 
 app = MyApp()
 app.run()

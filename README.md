@@ -9,3 +9,6 @@ cd pointcloud_density_analyzer
 python3 pointcloud_density_analyzer.py <pointcloud1>.pcd <pointcloud2>.pcd ...
 ```
 ![View](.docs/view.png)
+
+
+python3 pda.py -s XY YZ -i

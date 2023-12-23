@@ -70,9 +70,14 @@ def read_pcd(file_path):
                 break
         for line in f:
             values = line.strip().split()
-            if len(values) >= 3:
+            if len(values) == 3:
                 x, y, z = float(values[0]), float(values[1]), float(values[2])
                 point = np.array([x, y, z])
                 points.append(point)
+            elif len(values) == 4:
+                x, y, z, i = float(values[0]), float(values[1]), float(values[2]), float(values[3])
+                point = np.array([x, y, z, i])
+                points.append(point)
+
 
     return np.array(points)

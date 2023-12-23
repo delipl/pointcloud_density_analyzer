@@ -20,7 +20,7 @@ def plot_3D(title: str, cloud: np.array):
         x,
         y,
         z,
-        s=[0.01 for i in range(len(x))],
+        s=[0.05 for i in range(len(x))],
         marker="o",
     )
     ax.set_box_aspect([np.ptp(coord) for coord in [x, y, z]])
